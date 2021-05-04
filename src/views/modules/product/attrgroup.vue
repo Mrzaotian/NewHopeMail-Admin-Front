@@ -84,7 +84,7 @@
             prop="catelogId"
             header-align="center"
             align="center"
-            label="所属分类id"
+            label="所属分类"
           ></el-table-column>
           <el-table-column
             fixed="right"
@@ -200,7 +200,6 @@ export default {
         if (data && data.code === 0) {
           this.dataList = data.page.list;
           this.totalPage = data.page.totalCount;
-          console.log(this.dataList)
         } else {
           this.dataList = [];
           this.totalPage = 0;

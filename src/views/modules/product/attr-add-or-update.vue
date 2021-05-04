@@ -29,7 +29,6 @@
         ></el-switch>
       </el-form-item>
       <el-form-item label="可选值" prop="valueSelect">
-        <!-- <el-input v-model="dataForm.valueSelect"></el-input> -->
         <el-select
           v-model="dataForm.valueSelect"
           multiple
