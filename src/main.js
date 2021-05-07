@@ -7,14 +7,13 @@ import '@/element-ui'                         // api: https://github.com/ElemeFE
 import '@/icons'                              // api: http://www.iconfont.cn/
 import '@/element-ui-theme'
 import '@/assets/scss/index.scss'
-import PubSub from "pubsub-js";
 import httpRequest from '@/utils/httpRequest' // api: https://github.com/axios/axios
 import { isAuth } from '@/utils'
 import cloneDeep from 'lodash/cloneDeep'
 
 Vue.use(VueCookie)
 Vue.config.productionTip = false
-Vue.use(PubSub)
+
 // 非生产环境, 适配mockjs模拟数据                 // api: https://github.com/nuysoft/Mock
 if (process.env.NODE_ENV !== 'production') {
   require('@/mock')
