@@ -143,11 +143,14 @@
                     v-show="false"
                   ></el-input>
                   <el-checkbox-group
-                    v-model="dataResp.tempSaleAttrs[aidx].attrValues">
+                    v-model="dataResp.tempSaleAttrs[aidx].attrValues"
+                    v-if="dataResp.saleAttrs[aidx].valueSelect != ''"
+                  >
                     <el-checkbox
-                      v-if="dataResp.saleAttrs[aidx].valueSelect != ''"
                       :label="val"
-                      v-for="val in dataResp.saleAttrs[aidx].valueSelect.split(';')"
+                      v-for="val in dataResp.saleAttrs[aidx].valueSelect.split(
+                        ';'
+                      )"
                       :key="val"
                     ></el-checkbox>
                     <div style="margin-left: 20px; display: inline">
@@ -346,6 +349,7 @@
                         v-if="scope.row.memberPrice.length > 0"
                       >
                         <br />
+                        <!--   @change="handlePriceChange(scope,mpidx,$event)" -->
                         <el-form-item
                           v-for="(mp, mpidx) in scope.row.memberPrice"
                           :key="mp.id"
@@ -431,12 +435,12 @@ export default {
         brandId: [
           { required: true, message: "请选择一个品牌", trigger: "blur" },
         ],
-        // decript: [
-        //   { required: true, message: "请上传商品详情图集", trigger: "blur" },
-        // ],
-        // images: [
-        //   { required: true, message: "请上传商品图片集", trigger: "blur" },
-        // ],
+        decript: [
+          { required: true, message: "请上传商品详情图集", trigger: "blur" }
+        ],
+        images: [
+          { required: true, message: "请上传商品图片集", trigger: "blur" }
+        ],
         weight: [
           {
             type: "number",
@@ -465,7 +469,11 @@ export default {
   //监控data中的数据变化
   watch: {
     uploadImages(val) {
+      //扩展每个skus里面的imgs选项
       let imgArr = Array.from(new Set(this.spu.images.concat(val)));
+
+      //{imgUrl:"",defaultImg:0} 由于concat每次迭代上次，有很多重复。所以我们必须得到上次+这次的总长
+
       this.spu.skus.forEach((item, index) => {
         let len = imgArr.length - this.spu.skus[index].images.length; //还差这么多
         if (len > 0) {
@@ -525,11 +533,14 @@ export default {
     showInput(idx) {
       console.log("``````", this.view);
       this.inputVisible[idx].view = true;
+      // this.$refs['saveTagInput'+idx].$refs.input.focus();
     },
     checkDefaultImg(row, index, img) {
       console.log("默认图片", row, index);
+      //这个图片被选中了，
       row.images[index].imgUrl = img; //默认选中
       row.images[index].defaultImg = 1; //修改标志位;
+      //修改其他人的标志位
       row.images.forEach((item, idx) => {
         if (idx != index) {
           row.images[idx].defaultImg = 0;
@@ -592,8 +603,15 @@ export default {
           this.dataResp.tableAttrColumn.push(item);
         }
       });
+
       let descartes = this.descartes(selectValues);
+      //[["黑色","6GB","移动"],["黑色","6GB","联通"],["黑色","8GB","移动"],["黑色","8GB","联通"],
+      //["白色","6GB","移动"],["白色","6GB","联通"],["白色","8GB","移动"],["白色","8GB","联通"],
+      //["蓝色","6GB","移动"],["蓝色","6GB","联通"],["蓝色","8GB","移动"],["蓝色","8GB","联通"]]
+      console.log("生成的组合", JSON.stringify(descartes));
+      //有多少descartes就有多少sku
       let skus = [];
+
       descartes.forEach((descar, descaridx) => {
         let attrArray = []; //sku属性组
         descar.forEach((de, index) => {
@@ -605,10 +623,13 @@ export default {
           };
           attrArray.push(saleAttrItem);
         });
+        //先初始化几个images，后面的上传还要加
         let imgs = [];
         this.spu.images.forEach((img, idx) => {
           imgs.push({ imgUrl: "", defaultImg: 0 });
         });
+
+        //会员价，也必须在循环里面生成，否则会导致数据绑定问题
         let memberPrices = [];
         if (this.dataResp.memberLevels.length > 0) {
           for (let i = 0; i < this.dataResp.memberLevels.length; i++) {
@@ -621,6 +642,7 @@ export default {
             }
           }
         }
+        //;descaridx，判断如果之前有就用之前的值;
         let res = this.hasAndReturnSku(this.spu.skus, descar);
         if (res === null) {
           skus.push({
@@ -646,6 +668,7 @@ export default {
       this.spu.skus = skus;
       console.log("结果!!!", this.spu.skus, this.dataResp.tableAttrColumn);
     },
+    //判断如果包含之前的sku的descar组合，就返回这个sku的详细信息；
     hasAndReturnSku(skus, descar) {
       let res = null;
       if (skus.length > 0) {
@@ -658,6 +681,7 @@ export default {
       return res;
     },
     getShowSaleAttr() {
+      //获取当前分类可以使用的销售属性
       if (!this.dataResp.steped[1]) {
         this.$http({
           url: this.$http.adornUrl(
@@ -692,6 +716,7 @@ export default {
           method: "get",
           params: this.$http.adornParams({}),
         }).then(({ data }) => {
+          //先对表单的baseAttrs进行初始化
           data.data.forEach((item) => {
             let attrArray = [];
             item.attrs.forEach((attr) => {
@@ -744,18 +769,25 @@ export default {
           });
         });
     },
+    //笛卡尔积运算
     descartes(list) {
+      //parent上一级索引;count指针计数
       var point = {};
+
       var result = [];
       var pIndex = null;
       var tempCount = 0;
       var temp = [];
+
+      //根据参数列生成指针对象
       for (var index in list) {
         if (typeof list[index] == "object") {
           point[index] = { parent: pIndex, count: 0 };
           pIndex = index;
         }
       }
+
+      //单维度数据结构直接返回
       if (pIndex == null) {
         return list;
       }
@@ -766,8 +798,12 @@ export default {
           tempCount = point[index]["count"];
           temp.push(list[index][tempCount]);
         }
+
+        //压入结果数组
         result.push(temp);
-        temp = []
+        temp = [];
+
+        //检查指针最大值问题
         while (true) {
           if (point[index]["count"] + 1 >= list[index].length) {
             point[index]["count"] = 0;
@@ -775,6 +811,8 @@ export default {
             if (pIndex == null) {
               return result;
             }
+
+            //赋值parent进行再次检查
             index = pIndex;
           } else {
             point[index]["count"]++;
@@ -786,7 +824,7 @@ export default {
   },
   //生命周期 - 创建完成（可以访问当前this实例）
   created() {},
-  //生命周期 - 挂载完成（可以访问DOM元素）npm install --save pubsub-js
+  //生命周期 - 挂载完成（可以访问DOM元素）
   mounted() {
     this.catPathSub = PubSub.subscribe("catPath", (msg, val) => {
       this.spu.catalogId = val[val.length - 1];
